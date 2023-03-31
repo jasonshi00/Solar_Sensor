@@ -52,7 +52,7 @@ String SendHTML(int data){
   ptr +=".button-on:active {background-color: #2980b9;}\n";
   ptr +=".button-off {background-color: #34495e;}\n";
   ptr +=".button-off:active {background-color: #2c3e50;}\n";
-  ptr +="p {font-size: 14px;color: #888;margin-bottom: 10px;}\n";
+  ptr +="p {font-size: 13px;color: #888;margin-bottom: 10px;}\n";
   ptr +="</style>\n";
   
   ptr +="</head>\n";
