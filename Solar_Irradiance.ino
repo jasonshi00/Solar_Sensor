@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <WebServer.h>
+#include <TimeLib.h>
 
 /* Put your SSID & Password */
 const char* ssid = "ESP32";  // Enter SSID here
@@ -76,6 +77,7 @@ String SendHTML(){
   ptr +="<body>\n";
   ptr +="<h1>Solar Irradiance Sensor</h1>\n";
   ptr +="<h3>Jason a cute fr Mode</h3>\n";
+  ptr +="<h3>Irradiance Level</h3>\n";
   ptr +="<p>Data: ";
   ptr += "<span id=\"analogValue\">0</span>";
   ptr += "</p>\n";
