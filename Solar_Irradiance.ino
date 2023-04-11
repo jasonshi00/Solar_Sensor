@@ -1,6 +1,6 @@
 #include <WiFi.h>
 #include <WebServer.h>
-#include <TimeLib.h>
+#include <ESP32Time.h>
 
 /* Put your SSID & Password */
 const char* ssid = "ESP32";  // Enter SSID here
@@ -45,6 +45,7 @@ void setup() {
   server.onNotFound(handle_NotFound);
   
   server.begin();
+  rtc.setTime(30, 24, 15, 11, 4, 2023); // 11th April 2023 15:24:30
   Serial.println("HTTP server started");
 }
 void loop() {
@@ -76,8 +77,9 @@ String SendHTML(){
   //BODY
   ptr +="<body>\n";
   ptr +="<h1>Solar Irradiance Sensor</h1>\n";
-  ptr +="<h3>Jason a cutie fr Mode</h3>\n";
-  ptr +="<h3>Irradiance Level</h3>\n";
+  ptr +="<h3>Average Irradiance Level:<br>";
+  ptr +="Best Plants For Your Garden!</h3>\n";
+
   ptr +="<p>Data: ";
   ptr += "<span id=\"analogValue\">0</span>";
   ptr += "</p>\n";
