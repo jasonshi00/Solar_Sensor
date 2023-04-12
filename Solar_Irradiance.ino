@@ -1,6 +1,8 @@
 #include <WiFi.h>
 #include <WebServer.h>
+#include <Preferences.h>
 
+Preferences preferences;
 /* Put your SSID & Password */
 const char* ssid = "ESP32";  // Enter SSID here
 const char* password = "12345678";  //Enter Password here
@@ -13,6 +15,10 @@ IPAddress subnet(255,255,255,0);
 WebServer server(80);
 
 int analogValue;
+
+int data[9999];
+unsigned long lastMillis = millis();
+const long interval = 900000; //15 minutes
 
 void handleRoot() {
  String s = SendHTML(); //Read HTML contents
@@ -47,10 +53,14 @@ void setup() {
   Serial.println("HTTP server started");
 }
 void loop() {
+  
+  if (millis() - lastMillis >= 2*60*1000UL) {
+    lastMillis = millis();  //get ready for the next iteration
+    myFunction();
+  }
   server.handleClient();
-   int a = analogRead(4);
-   Serial.println(a);
-  delay(1);
+  delay(100);
+
 }
 
 
