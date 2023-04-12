@@ -1,6 +1,10 @@
 #include <WiFi.h>
 #include <WebServer.h>
+<<<<<<< HEAD
 #include <Preferences.h>
+=======
+#include <ESP32Time.h>
+>>>>>>> 752d38c06c78264b39287c0220f33897e53937d5
 
 Preferences preferences;
 /* Put your SSID & Password */
@@ -50,6 +54,7 @@ void setup() {
   server.onNotFound(handle_NotFound);
   
   server.begin();
+  rtc.setTime(30, 24, 15, 11, 4, 2023); // 11th April 2023 15:24:30
   Serial.println("HTTP server started");
 }
 void loop() {
@@ -71,21 +76,23 @@ String SendHTML(){
   ptr +="<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
   ptr +="<title>LED Control</title>\n";
   //STYLES
-  ptr +="<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}\n";
-  ptr +="body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;} h3 {color: #444444;margin-bottom: 50px;}\n";
-  ptr +=".button {display: block;width: 80px;background-color: #3498db;border: none;color: white;padding: 13px 30px;text-decoration: none;font-size: 25px;margin: 0px auto 35px;cursor: pointer;border-radius: 4px;}\n";
-  ptr +=".button-on {background-color: #3498db;}\n";
-  ptr +=".button-on:active {background-color: #2980b9;}\n";
-  ptr +=".button-off {background-color: #34495e;}\n";
-  ptr +=".button-off:active {background-color: #2c3e50;}\n";
-  ptr +="p {font-size: 13px;color: #888;margin-bottom: 10px;}\n";
+  ptr +="<style>html { font-family: TT Ramillas; display: inline-block; margin: 0px auto; text-align: center;}\n";
+  ptr +="body{margin-top: 50px; background-color: #F9F6EE} h1 {color: #063;margin: 50px auto 30px;} h3 {color: #063;margin-bottom: 50px;}\n";
+  ptr +=".button {display: block;width: 80px;background-color: #063;border: none;color: green;padding: 13px 30px;text-decoration: none;font-size: 25px;margin: 0px auto 35px;cursor: pointer;border-radius: 4px;}\n";
+  ptr +=".button-on {background-color: #063;}\n";
+  ptr +=".button-on:active {background-color: #063;}\n";
+  ptr +=".button-off {background-color: #063;}\n";
+  ptr +=".button-off:active {background-color: #063;}\n";
+  ptr +="p {font-size: 13px;color: #063;margin-bottom: 10px;}\n";
   ptr +="</style>\n";
   //STYLE END
   ptr +="</head>\n";
   //BODY
   ptr +="<body>\n";
   ptr +="<h1>Solar Irradiance Sensor</h1>\n";
-  ptr +="<h3>Jason a cute fr Mode</h3>\n";
+  ptr +="<h3>Average Irradiance Level:<br>";
+  ptr +="Best Plants For Your Garden!</h3>\n";
+
   ptr +="<p>Data: ";
   ptr += "<span id=\"analogValue\">0</span>";
   ptr += "</p>\n";
