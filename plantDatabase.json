@@ -1,0 +1,26 @@
+[
+    {
+        "name" : "Spider Plant",
+        "DLI": {"low": 4, "high": 14},
+        "PPFD": {"low": 122, "high": 245},
+        "Photoperiod": {"low": 10, "high": 12}
+    },
+    {
+        "name" : "Ferns",
+        "DLI": {"low": 4, "high": 6},
+        "PPFD": {"low": 245, "high": 367},
+        "Photoperiod": {"low": 8, "high": 16}
+    },
+    {
+        "name" : "Aloe",
+        "DLI": {"low": 4, "high": 14},
+        "PPFD": {"low": 245, "high": 489},
+        "Photoperiod": {"low": 12, "high": 16}
+    },
+    {
+        "name" : "Croton",
+        "DLI": {"low": 4, "high": 16},
+        "PPFD": {"low": 80, "high": 160},
+        "Photoperiod": {"low": 12, "high": 16}
+    }
+]

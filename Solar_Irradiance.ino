@@ -1,12 +1,9 @@
 #include <WiFi.h>
 #include <WebServer.h>
-<<<<<<< HEAD
-#include <Preferences.h>
-=======
 #include <ESP32Time.h>
->>>>>>> 752d38c06c78264b39287c0220f33897e53937d5
+#include <ArduinoJson.h>
+#include <fstream> 
 
-Preferences preferences;
 /* Put your SSID & Password */
 const char* ssid = "ESP32";  // Enter SSID here
 const char* password = "12345678";  //Enter Password here
@@ -15,14 +12,17 @@ const char* password = "12345678";  //Enter Password here
 IPAddress local_ip(192,168,1,1);
 IPAddress gateway(192,168,1,1);
 IPAddress subnet(255,255,255,0);
-
 WebServer server(80);
 
-int analogValue;
-
-int data[9999];
+const int SIZE_OF_ARRAY = 9999;
+int data[SIZE_OF_ARRAY];
 unsigned long lastMillis = millis();
-const long interval = 900000; //15 minutes
+const unsigned long interval = 30000UL; //15 minutes
+int indexOfArray = 0;
+
+StaticJsonDocument<1024> doc;
+File file = SPIFFS.open("/plantDatabase.json", "r");
+
 
 void handleRoot() {
  String s = SendHTML(); //Read HTML contents
@@ -32,8 +32,18 @@ void handleRoot() {
 void handleAnalog() {
  int a = analogRead(4);
  String analogValue = String(a);
- 
+    
  server.send(200, "text/plane", analogValue); //Send ADC value only to client ajax request
+}
+
+void handleArray() {
+  String strOutput = "";
+  for (int i = 0; i < indexOfArray; i++) {
+    int a = data[i];
+    strOutput += "<li>" + String(a) + "</li>";
+  }
+  server.send(200, "text/plane", strOutput);
+
 }
 
 void handle_NotFound(){
@@ -51,17 +61,58 @@ void setup() {
   
   server.on("/", handleRoot);
   server.on("/readAnalog", handleAnalog);
+  server.on("/readArray", handleArray);
   server.onNotFound(handle_NotFound);
   
   server.begin();
-  rtc.setTime(30, 24, 15, 11, 4, 2023); // 11th April 2023 15:24:30
-  Serial.println("HTTP server started");
+  // rtc.setTime(30, 24, 15, 11, 4, 2023); // 11th April 2023 15:24:30
+  Serial.println("HTTP server started :)");
+
+
+
+  DeserializationError error = deserializeJson(doc, myfile);
+
+  if (error) {
+    Serial.print("deserializeJson() failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  for (JsonObject item : doc.as<JsonArray>()) {
+
+    const char* name = item["name"]; // "Spider Plant", "Ferns", "Aloe", "Croton"
+
+    int DLI_low = item["DLI"]["low"]; // 4, 4, 4, 4
+    int DLI_high = item["DLI"]["high"]; // 14, 6, 14, 16
+
+    int PPFD_low = item["PPFD"]["low"]; // 122, 245, 245, 80
+    int PPFD_high = item["PPFD"]["high"]; // 245, 367, 489, 160
+
+    int Photoperiod_low = item["Photoperiod"]["low"]; // 10, 8, 12, 12
+    int Photoperiod_high = item["Photoperiod"]["high"]; // 12, 16, 16, 16
+
+    Serial.println(name);
+    Serial.println(DLI_low);
+    Serial.println(DLI_high);
+    Serial.println(PPFD_low);
+    Serial.println(PPFD_high);
+    Serial.println(Photoperiod_low);
+    Serial.println(Photoperiod_high);
+  }
+
+
 }
 void loop() {
-  
-  if (millis() - lastMillis >= 2*60*1000UL) {
+
+  if (indexOfArray >= SIZE_OF_ARRAY) {
+    indexOfArray = 0;    
+  }
+  if (millis() - lastMillis >= interval) {
     lastMillis = millis();  //get ready for the next iteration
-    myFunction();
+    int analogValue = analogRead(4);
+
+    data[indexOfArray] = analogValue;
+    indexOfArray++;
   }
   server.handleClient();
   delay(100);
@@ -93,8 +144,10 @@ String SendHTML(){
   ptr +="<h3>Average Irradiance Level:<br>";
   ptr +="Best Plants For Your Garden!</h3>\n";
 
-  ptr +="<p>Data: ";
+  ptr +="<h6>Data: ";
   ptr += "<span id=\"analogValue\">0</span>";
+  ptr += "<h6>Best Plant: ";
+  ptr += "<ul id =\"dataList\"></ul>";
   ptr += "</p>\n";
 
   //SCRIPT
@@ -106,6 +159,14 @@ String SendHTML(){
   ptr += "xhttp.onreadystatechange = function() {";
   ptr += "document.getElementById(\"analogValue\").innerHTML = this.responseText; };";
   ptr += "xhttp.open(\"GET\", \"readAnalog\", true); xhttp.send(); }\n";
+// for array
+  ptr += "setInterval(function() {getArrayData();}, 2000);\n";
+  ptr += "function getArrayData() {";
+  ptr += "var xhttp = new XMLHttpRequest();"; 
+  ptr += "xhttp.onreadystatechange = function() {";
+  ptr += "document.getElementById(\"dataList\").innerHTML = this.responseText; };";
+  ptr += "xhttp.open(\"GET\", \"readArray\", true); xhttp.send(); }\n";
+  
   //SCRIPT END
   ptr += "</script>\n";
 
