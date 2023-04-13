@@ -1,8 +1,10 @@
 #include <WiFi.h>
 #include <WebServer.h>
-#include <ESP32Time.h>
+//#include <ESP32Time.h>
 #include <ArduinoJson.h>
 #include <fstream> 
+#include "FS.h"
+#include "SPIFFS.h"
 
 /* Put your SSID & Password */
 const char* ssid = "ESP32";  // Enter SSID here
@@ -21,7 +23,7 @@ const unsigned long interval = 30000UL; //15 minutes
 int indexOfArray = 0;
 
 StaticJsonDocument<1024> doc;
-File file = SPIFFS.open("/plantDatabase.json", "r");
+
 
 
 void handleRoot() {
@@ -68,9 +70,24 @@ void setup() {
   // rtc.setTime(30, 24, 15, 11, 4, 2023); // 11th April 2023 15:24:30
   Serial.println("HTTP server started :)");
 
+  if(!SPIFFS.begin(true)){
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    return;
+  }
+  
+  File file = SPIFFS.open("/plantDatabase.json", "r");
+  if(!file){
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+  
+  Serial.println("File Content:");
+  while(file.available()){
+    Serial.write(file.read());
+  }
 
-
-  DeserializationError error = deserializeJson(doc, myfile);
+  DeserializationError error = deserializeJson(doc, file);
+  file.close();
 
   if (error) {
     Serial.print("deserializeJson() failed: ");
