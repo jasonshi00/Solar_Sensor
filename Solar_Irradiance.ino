@@ -16,24 +16,44 @@ IPAddress gateway(192,168,1,1);
 IPAddress subnet(255,255,255,0);
 WebServer server(80);
 
+//button variables
+const int buttonPin = 1; // the number of the pushbutton pin
+int buttonState = 0;
+bool serverOn = false;
+
+//DLI
 const int SIZE_OF_DLI = 9999;
 int data[96];
 int DLI[SIZE_OF_DLI];
+
+//Millis
 unsigned long lastMillis = millis();
 unsigned long lastMillisDay = millis();
-const unsigned long interval = 1000UL; //15 minutes  right now its 1 seconds
+
+//intervals
+const unsigned long interval = 1000UL; //15 minutes  right now its 15 seconds
 const unsigned long day = 96000UL;//a day   right now its 1.6 minutes
+
+//indexes
 int indexOfArray = 0;
 int indexOfDLI = 0;
+
 StaticJsonDocument<1536> doc;
 
+int milliVoltsToPPFD(int data) {
+  float WattsPerMSquared = 0.00515 * exp(.0233 * float(data));
+  float PPFD = WattsPerMSquared / .327;
+  PPFD = max((int)PPFD, 0);
+  return (int)PPFD;
+  }
+  
 int sumOfData() {
   float total = 0;
   for (int i = 0; i < 96; i++) {
     total = total + (3.6*.001* float(data[i]) * 0.25);
-  }
+    }
   return (int)total;
-}
+  }
 
 int avgDLI() {
   int avg = 0;
@@ -65,27 +85,29 @@ const String processDLI() {
   Serial.println(distance);
   return String(item_name);
 }
+
 void handleRoot() {
  String s = SendHTML(); //Read HTML contents
  server.send(200, "text/html", s); //Send web page
 }
 
 void handleAnalog() {
- int a = analogRead(4);
- String analogValue = String(a);
+ int a = analogReadMilliVolts(4);
+ int b = milliVoltsToPPFD(a);
+ String analogValue = String(b);
     
  server.send(200, "text/plane", analogValue); //Send ADC value only to client ajax request
 }
 
-void handleArray() {
-  String strOutput = "";
-  for (int i = 0; i < indexOfDLI; i++) {
-    int a = DLI[i];
-    strOutput += "<li>" + String(a) + "</li>";
-  }
-  server.send(200, "text/plane", strOutput);
-
-}
+//void handleArray() {
+//  String strOutput = "";
+//  for (int i = 0; i < indexOfDLI; i++) {
+//    int a = DLI[i];
+//    strOutput += "<li>" + String(a) + "</li>";
+//  }
+//  server.send(200, "text/plane", strOutput);
+//
+//}
 
 void handlePlantName() {
   String plantName = processDLI();
@@ -100,21 +122,20 @@ void handle_NotFound(){
 
 void setup() {
   Serial.begin(115200);
-
-  WiFi.softAP(ssid, password);
-  WiFi.softAPConfig(local_ip, gateway, subnet);
-  delay(100);
-  
-  server.on("/", handleRoot);
-  server.on("/readAnalog", handleAnalog);
-  server.on("/readArray", handleArray);
-  server.on("/readPlantName", handlePlantName);
-  
-  server.onNotFound(handle_NotFound);
-  
-  server.begin();
+//
+//  WiFi.softAP(ssid, password);
+//  WiFi.softAPConfig(local_ip, gateway, subnet);
+//  delay(100);
+//  
+//  server.on("/", handleRoot);
+//  server.on("/readAnalog", handleAnalog);
+//  server.on("/readArray", handleArray);
+//  server.on("/readPlantName", handlePlantName);
+//  
+//  server.onNotFound(handle_NotFound);
+//  
+//  server.begin();
   // rtc.setTime(30, 24, 15, 11, 4, 2023); // 11th April 2023 15:24:30
-  Serial.println("HTTP server started :)");
 
   if(!SPIFFS.begin(true)){
     Serial.println("An Error has occurred while mounting SPIFFS");
@@ -134,9 +155,11 @@ void setup() {
     Serial.println(error.c_str());
     return;
   }
+
+  pinMode(buttonPin, INPUT);
 }
 void loop() {
-
+  
   if (indexOfArray >= 96) {
     indexOfArray = 0;    
   }
@@ -145,7 +168,8 @@ void loop() {
   }
   if (millis() - lastMillis >= interval) {
     lastMillis = millis();  //get ready for the next iteration
-    int analogValue = analogRead(4);
+    int a = analogReadMilliVolts(4);
+    int analogValue = milliVoltsToPPFD(a);
     data[indexOfArray] = analogValue;
     Serial.print("data :");
     Serial.println(data[indexOfArray]);
@@ -158,6 +182,28 @@ void loop() {
     Serial.print("DLI: ");
     Serial.println(DLI[indexOfDLI]);
     indexOfDLI++;
+  }
+
+  buttonState = digitalRead(buttonPin);
+  if (buttonState == HIGH && !serverOn) {
+    WiFi.softAP(ssid, password);
+    WiFi.softAPConfig(local_ip, gateway, subnet);
+    delay(100);
+    
+    server.on("/", handleRoot);
+    server.on("/readAnalog", handleAnalog);
+//    server.on("/readArray", handleArray);
+    server.on("/readPlantName", handlePlantName);
+    
+    server.onNotFound(handle_NotFound);
+    
+    server.begin();
+    Serial.println("HTTP server started :)");
+    serverOn = true;
+  }
+  else if (buttonState == LOW && serverOn) {
+    WiFi.softAPdisconnect(true);
+    serverOn = false;
   }
   
   server.handleClient();
@@ -187,32 +233,29 @@ String SendHTML(){
   //BODY
   ptr +="<body>\n";
   ptr +="<h1>Solar Irradiance Sensor</h1>\n";
-  ptr +="<h3>Average Irradiance Level:<br>";
-  ptr +="Best Plants For Your Garden!</h3>\n";
-
-  ptr +="<h6>Data: ";
+  ptr +="<h3>Data: ";
   ptr += "<span id=\"analogValue\">0</span>";
-  ptr += "<h6>Best Plant: ";
+  ptr += "<h3>Best Plant for your Garden: ";
   ptr += "<span id=\"plantName\">waiting for Data</span>";
-  ptr += "<h6>Data list:</h6>";
-  ptr += "<ul id =\"dataList\"></ul>";
+//  ptr += "<h6>Data list:</h6>";
+//  ptr += "<ul id =\"dataList\"></ul>";
   ptr += "</p>\n";
 
   //SCRIPT
   ptr +="<script>";
   //2000mSeconds update rate
-  ptr += "setInterval(function() {getData(); getArrayData(); getPlantName();}, 2000);\n";
+  ptr += "setInterval(function() {getData();  getPlantName();}, 2000);\n";
   ptr += "function getData() {";
   ptr += "var xhttp = new XMLHttpRequest();";
   ptr += "xhttp.onreadystatechange = function() {";
   ptr += "document.getElementById(\"analogValue\").innerHTML = this.responseText; };";
   ptr += "xhttp.open(\"GET\", \"readAnalog\", true); xhttp.send(); }\n";
 // for array
-  ptr += "function getArrayData() {";
-  ptr += "var xhttp = new XMLHttpRequest();"; 
-  ptr += "xhttp.onreadystatechange = function() {";
-  ptr += "document.getElementById(\"dataList\").innerHTML = this.responseText; };";
-  ptr += "xhttp.open(\"GET\", \"readArray\", true); xhttp.send(); }\n";
+//  ptr += "function getArrayData() {";
+//  ptr += "var xhttp = new XMLHttpRequest();"; 
+//  ptr += "xhttp.onreadystatechange = function() {";
+//  ptr += "document.getElementById(\"dataList\").innerHTML = this.responseText; };";
+//  ptr += "xhttp.open(\"GET\", \"readArray\", true); xhttp.send(); }\n";
 // for plantName
    ptr += "function getPlantName() {";
   ptr += "var xhttp = new XMLHttpRequest();"; 
