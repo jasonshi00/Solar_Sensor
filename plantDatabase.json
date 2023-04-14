@@ -2,19 +2,19 @@
     {
         "name" : "Spider Plant",
         "DLI": {"low": 4, "high": 14},
-        "PPFD": {"low": 122, "high": 245},
+        "PPFD": {"low": 40, "high": 80},
         "Photoperiod": {"low": 10, "high": 12}
     },
     {
         "name" : "Ferns",
         "DLI": {"low": 4, "high": 6},
-        "PPFD": {"low": 245, "high": 367},
+        "PPFD": {"low": 80, "high": 120},
         "Photoperiod": {"low": 8, "high": 16}
     },
     {
         "name" : "Aloe",
         "DLI": {"low": 4, "high": 14},
-        "PPFD": {"low": 245, "high": 489},
+        "PPFD": {"low": 80, "high": 160},
         "Photoperiod": {"low": 12, "high": 16}
     },
     {
@@ -22,5 +22,29 @@
         "DLI": {"low": 4, "high": 16},
         "PPFD": {"low": 80, "high": 160},
         "Photoperiod": {"low": 12, "high": 16}
+    },
+    {
+        "name" : "Strawberry",
+        "DLI": {"low": 17, "high": 28},
+        "PPFD": {"low": 400, "high": 600},
+        "Photoperiod": {"low": 10, "high": 16}
+    },
+    {
+        "name" : "Pineapple",
+        "DLI": {"low": 15, "high": 30},
+        "PPFD": {"low": 350, "high": 700},
+        "Photoperiod": {"low": 10, "high": 16}
+    },
+    {
+        "name" : "Basil",
+        "DLI": {"low": 12, "high": 26},
+        "PPFD": {"low": 220, "high": 500},
+        "Photoperiod": {"low": 8, "high": 16}
+    },
+    {
+        "name" : "Peach",
+        "DLI": {"low": 8, "high": 14},
+        "PPFD": {"low": 220, "high": 300},
+        "Photoperiod": {"low": 10, "high": 16}
     }
 ]
