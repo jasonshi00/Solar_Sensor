@@ -16,16 +16,55 @@ IPAddress gateway(192,168,1,1);
 IPAddress subnet(255,255,255,0);
 WebServer server(80);
 
-const int SIZE_OF_ARRAY = 9999;
-int data[SIZE_OF_ARRAY];
+const int SIZE_OF_DLI = 9999;
+int data[96];
+int DLI[SIZE_OF_DLI];
 unsigned long lastMillis = millis();
-const unsigned long interval = 30000UL; //15 minutes
+unsigned long lastMillisDay = millis();
+const unsigned long interval = 1000UL; //15 minutes  right now its 1 seconds
+const unsigned long day = 96000UL;//a day   right now its 1.6 minutes
 int indexOfArray = 0;
+int indexOfDLI = 0;
+StaticJsonDocument<1536> doc;
 
-StaticJsonDocument<1024> doc;
+int sumOfData() {
+  float total = 0;
+  for (int i = 0; i < 96; i++) {
+    total = total + (3.6*.001* float(data[i]) * 0.25);
+  }
+  return (int)total;
+}
 
+int avgDLI() {
+  int avg = 0;
+  for (int i = 0; i < indexOfDLI; i++) {
+    avg += DLI[i];
+  }
+  Serial.print("avgDLI: ");
+  Serial.println(avg/indexOfDLI);
+  return (avg/indexOfDLI);
+}
 
-
+const String processDLI() {
+  int avgDLIInt = avgDLI();
+  float distance = 99999;
+  const char* item_name = "";
+  if (indexOfDLI == 0) {
+    return String(item_name);
+  }
+  for (JsonObject item : doc.as<JsonArray>()) {
+    int DLI_low = item["DLI"]["low"]; 
+    int DLI_high = item["DLI"]["high"]; 
+    float avg_DLI_item = (DLI_low + DLI_high) / 2.0;
+    if (abs(avg_DLI_item - float(avgDLIInt)) < distance) {
+      distance = abs(avg_DLI_item - float(avgDLIInt));
+      item_name = item["name"];
+    }
+  }
+  Serial.print("distance: ");
+  Serial.println(distance);
+  return String(item_name);
+}
 void handleRoot() {
  String s = SendHTML(); //Read HTML contents
  server.send(200, "text/html", s); //Send web page
@@ -40,12 +79,17 @@ void handleAnalog() {
 
 void handleArray() {
   String strOutput = "";
-  for (int i = 0; i < indexOfArray; i++) {
-    int a = data[i];
+  for (int i = 0; i < indexOfDLI; i++) {
+    int a = DLI[i];
     strOutput += "<li>" + String(a) + "</li>";
   }
   server.send(200, "text/plane", strOutput);
 
+}
+
+void handlePlantName() {
+  String plantName = processDLI();
+  server.send(200, "text/plane", plantName);
 }
 
 void handle_NotFound(){
@@ -64,6 +108,8 @@ void setup() {
   server.on("/", handleRoot);
   server.on("/readAnalog", handleAnalog);
   server.on("/readArray", handleArray);
+  server.on("/readPlantName", handlePlantName);
+  
   server.onNotFound(handle_NotFound);
   
   server.begin();
@@ -81,56 +127,39 @@ void setup() {
     return;
   }
   
-  Serial.println("File Content:");
-  while(file.available()){
-    Serial.write(file.read());
-  }
-
   DeserializationError error = deserializeJson(doc, file);
-  file.close();
 
   if (error) {
     Serial.print("deserializeJson() failed: ");
     Serial.println(error.c_str());
     return;
   }
-
-  for (JsonObject item : doc.as<JsonArray>()) {
-
-    const char* name = item["name"]; // "Spider Plant", "Ferns", "Aloe", "Croton"
-
-    int DLI_low = item["DLI"]["low"]; // 4, 4, 4, 4
-    int DLI_high = item["DLI"]["high"]; // 14, 6, 14, 16
-
-    int PPFD_low = item["PPFD"]["low"]; // 122, 245, 245, 80
-    int PPFD_high = item["PPFD"]["high"]; // 245, 367, 489, 160
-
-    int Photoperiod_low = item["Photoperiod"]["low"]; // 10, 8, 12, 12
-    int Photoperiod_high = item["Photoperiod"]["high"]; // 12, 16, 16, 16
-
-    Serial.println(name);
-    Serial.println(DLI_low);
-    Serial.println(DLI_high);
-    Serial.println(PPFD_low);
-    Serial.println(PPFD_high);
-    Serial.println(Photoperiod_low);
-    Serial.println(Photoperiod_high);
-  }
-
-
 }
 void loop() {
 
-  if (indexOfArray >= SIZE_OF_ARRAY) {
+  if (indexOfArray >= 96) {
     indexOfArray = 0;    
+  }
+  if (indexOfDLI >= SIZE_OF_DLI) {
+    indexOfDLI = 0;
   }
   if (millis() - lastMillis >= interval) {
     lastMillis = millis();  //get ready for the next iteration
     int analogValue = analogRead(4);
-
     data[indexOfArray] = analogValue;
+    Serial.print("data :");
+    Serial.println(data[indexOfArray]);
+
     indexOfArray++;
   }
+  if (millis() - lastMillisDay >= day) {
+    lastMillisDay = millis();
+    DLI[indexOfDLI] = sumOfData();
+    Serial.print("DLI: ");
+    Serial.println(DLI[indexOfDLI]);
+    indexOfDLI++;
+  }
+  
   server.handleClient();
   delay(100);
 
@@ -164,26 +193,32 @@ String SendHTML(){
   ptr +="<h6>Data: ";
   ptr += "<span id=\"analogValue\">0</span>";
   ptr += "<h6>Best Plant: ";
+  ptr += "<span id=\"plantName\">waiting for Data</span>";
+  ptr += "<h6>Data list:</h6>";
   ptr += "<ul id =\"dataList\"></ul>";
   ptr += "</p>\n";
 
   //SCRIPT
   ptr +="<script>";
   //2000mSeconds update rate
-  ptr += "setInterval(function() {getData();}, 2000);\n";
+  ptr += "setInterval(function() {getData(); getArrayData(); getPlantName();}, 2000);\n";
   ptr += "function getData() {";
   ptr += "var xhttp = new XMLHttpRequest();";
   ptr += "xhttp.onreadystatechange = function() {";
   ptr += "document.getElementById(\"analogValue\").innerHTML = this.responseText; };";
   ptr += "xhttp.open(\"GET\", \"readAnalog\", true); xhttp.send(); }\n";
 // for array
-  ptr += "setInterval(function() {getArrayData();}, 2000);\n";
   ptr += "function getArrayData() {";
   ptr += "var xhttp = new XMLHttpRequest();"; 
   ptr += "xhttp.onreadystatechange = function() {";
   ptr += "document.getElementById(\"dataList\").innerHTML = this.responseText; };";
   ptr += "xhttp.open(\"GET\", \"readArray\", true); xhttp.send(); }\n";
-  
+// for plantName
+   ptr += "function getPlantName() {";
+  ptr += "var xhttp = new XMLHttpRequest();"; 
+  ptr += "xhttp.onreadystatechange = function() {";
+  ptr += "document.getElementById(\"plantName\").innerHTML = this.responseText; };";
+  ptr += "xhttp.open(\"GET\", \"readPlantName\", true); xhttp.send(); }\n";
   //SCRIPT END
   ptr += "</script>\n";
 
